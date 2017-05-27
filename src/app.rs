@@ -1,14 +1,16 @@
 use glium::glutin;
 use graphics;
 
-const UP_COLOR_ACTIVE: [f32; 4] = [1., 0., 0., 1.];
-const DOWN_COLOR_ACTIVE: [f32; 4] = [1., 0., 0., 1.];
+const UP_COLOR_ACTIVE: [f32; 4] = [1., 1., 0., 1.];
+const DOWN_COLOR_ACTIVE: [f32; 4] = UP_COLOR_ACTIVE;
 
-const UP_COLOR: [f32; 4] = [1., 1., 0., 1.];
-const DOWN_COLOR: [f32; 4] = [1., 1., 0., 1.];
+const UP_COLOR: [f32; 4] = [0.4, 0.4, 0., 1.];
+const DOWN_COLOR: [f32; 4] = UP_COLOR_ACTIVE;
 
-const PROGRESS: [f32; 4] = [0., 1., 0., 1.];
-const PROGRESS_BACKGROUND: [f32; 4] = [1., 0., 0., 1.];
+const PROGRESS: [f32; 4] = [1., 0., 0., 1.];
+const PROGRESS_BACKGROUND: [f32; 4] = [0.4, 0., 0., 1.];
+
+const BLACK : [f32; 4] = [0., 0., 0., 1.];
 
 const TIME: f64 = 10.;
 
@@ -116,6 +118,9 @@ impl App {
                 }
             }
         }
+        frame.draw_rectangle(0., 0., 2., 0.05, BLACK);
+        frame.draw_rectangle(0., 1./3., 2., 0.05, BLACK);
+        frame.draw_rectangle(0., -1./3., 2., 0.05, BLACK);
     }
     pub fn touch(&mut self, touch: glutin::Touch) {
         use glutin::TouchPhase::*;

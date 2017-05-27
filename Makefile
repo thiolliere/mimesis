@@ -4,17 +4,11 @@ check:
 build:
 	rm -rf target/publication/html/*
 	cargo build --target asmjs-unknown-emscripten --release
-	cp target/asmjs-unknown-emscripten/release/airjump.js target/publication/html/
+	cp target/asmjs-unknown-emscripten/release/mimesis.js target/publication/html/
 	cp release.html target/publication/html/index.html
 
 run: build
 	firefox target/publication/html/index.html
-
-publish_itch: build
-	butler push target/publication/html/ rope/airjump:html
-
-publish_thiolliere: build
-	scp target/publication/html/* root@thiolliere.org:/var/www/html/airjump/
 
 doc:
 	cargo doc --open &
@@ -27,7 +21,7 @@ doc:
 # 	sudo docker run --rm -v `pwd`:/root/src -w /root/src tomaka/android-rs-glue cargo apk
 
 # android_install:
-# 	~/android-sdk-linux/platform-tools/adb install -r target/android-artifacts/build/bin/airjump-debug.apk
+# 	~/android-sdk-linux/platform-tools/adb install -r target/android-artifacts/build/bin/mimesis-debug.apk
 
 # TODO https://developer.android.com/studio/publish/app-signing.html
 # TODO zipalign -v -p 4 my-app-unsigned.apk my-app-unsigned-aligned.apk

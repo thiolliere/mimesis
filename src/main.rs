@@ -8,6 +8,7 @@ use glium::DisplayBuild;
 pub mod emscripten;
 mod app;
 mod graphics;
+pub mod backtrace_hack;
 
 pub trait OkOrExit {
     type OkType;
@@ -57,15 +58,6 @@ fn safe_main() -> Result<(), String> {
 
                     app.touch(touch);
                 },
-                Refresh => {
-                    let mut target = window.draw();
-                    {
-                        let mut frame = graphics::Frame::new(&mut graphics, &mut target);
-                        frame.clear();
-                        app.draw(&mut frame);
-                    }
-                    target.finish().unwrap();
-                }
                 _ => (),
             }
         }
