@@ -4,6 +4,11 @@ extern crate fps_clock;
 use glium::glutin;
 use glium::DisplayBuild;
 
+#[cfg(target_os = "emscripten")]
+pub mod emscripten;
+mod app;
+mod graphics;
+
 pub trait OkOrExit {
     type OkType;
     fn ok_or_exit(self) -> Self::OkType;
@@ -27,34 +32,53 @@ fn main() {
 
 fn safe_main() -> Result<(), String> {
     configure_fullscreen_strategy();
-    let mut builder = glutin::WindowBuilder::new()
+    let builder = glutin::WindowBuilder::new()
         .with_multitouch()
         .with_title("airjump");
 
     let window = builder.build_glium().map_err(|e| format!("build glium: {}", e))?;
 
+    let mut graphics = graphics::Graphics::new(&window).map_err(|e| format!("graphics: {}", e))?;
+
+    let mut app = app::App::new();
+
     // return whereas main loop breaks
-    set_main_loop(|_dt| -> bool {
+    set_main_loop(|dt| -> bool {
         for event in window.poll_events() {
             use glium::glutin::Event::*;
-            use glium::glutin::TouchPhase;
             match event {
                 Closed => return true,
-                Touch(touch) => {
+                Touch(mut touch) => {
+                    let (w, h) = window.get_window().unwrap().get_inner_size_points().unwrap();
+                    touch.location.0 -= (w/2) as f64;
+                    touch.location.0 /= (w/2) as f64;
+                    touch.location.1 -= (h/2) as f64;
+                    touch.location.1 /= (h/2) as f64;
+
+                    app.touch(touch);
                 },
                 Refresh => {
                     let mut target = window.draw();
-                    // {
-                    //     let camera = app.camera();
-                    //     let mut frame = graphics::Frame::new(&mut graphics, &mut target, &camera);
-                    //     frame.clear();
-                    //     app.draw(&mut frame);
-                    // }
-                    // target.finish().unwrap();
+                    {
+                        let mut frame = graphics::Frame::new(&mut graphics, &mut target);
+                        frame.clear();
+                        app.draw(&mut frame);
+                    }
+                    target.finish().unwrap();
                 }
                 _ => (),
             }
         }
+
+        app.update(dt);
+
+        let mut target = window.draw();
+        {
+            let mut frame = graphics::Frame::new(&mut graphics, &mut target);
+            frame.clear();
+            app.draw(&mut frame);
+        }
+        target.finish().unwrap();
 
         return false
     });
