@@ -55,6 +55,7 @@ fn safe_main() -> Result<(), String> {
                     touch.location.0 /= (w/2) as f64;
                     touch.location.1 -= (h/2) as f64;
                     touch.location.1 /= (h/2) as f64;
+                    touch.location.1 *= -1.;
 
                     app.touch(touch);
                 },

@@ -5,16 +5,16 @@ const UP_COLOR_ACTIVE: [f32; 4] = [1., 1., 0., 1.];
 const DOWN_COLOR_ACTIVE: [f32; 4] = UP_COLOR_ACTIVE;
 
 const UP_COLOR: [f32; 4] = [0.4, 0.4, 0., 1.];
-const DOWN_COLOR: [f32; 4] = UP_COLOR_ACTIVE;
+const DOWN_COLOR: [f32; 4] = UP_COLOR;
 
 const PROGRESS: [f32; 4] = [1., 0., 0., 1.];
 const PROGRESS_BACKGROUND: [f32; 4] = [0.4, 0., 0., 1.];
 
 const BLACK : [f32; 4] = [0., 0., 0., 1.];
 
-const TIME: f64 = 10.;
+const TIME: f64 = 5.;
 
-const END_TIMER: f64 = 5.;
+const END_TIMER: f64 = 3.;
 const END_BLINKING_TIMER: f64 = 0.1;
 
 
