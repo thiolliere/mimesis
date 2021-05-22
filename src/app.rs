@@ -1,129 +1,127 @@
-use glium::glutin;
-use graphics;
+const BUTTON_Y: f32 = 0.5;
+const BUTTON_RADIUS: f32 = 0.2;
 
-const UP_COLOR_ACTIVE: [f32; 4] = [1., 1., 0., 1.];
-const DOWN_COLOR_ACTIVE: [f32; 4] = UP_COLOR_ACTIVE;
-
-const UP_COLOR: [f32; 4] = [0.4, 0.4, 0., 1.];
-const DOWN_COLOR: [f32; 4] = UP_COLOR;
+const COLOR_ACTIVE: [f32; 4] = [1., 1., 0., 1.];
+const COLOR: [f32; 4] = [0.4, 0.4, 0., 1.];
 
 const PROGRESS: [f32; 4] = [1., 0., 0., 1.];
 const PROGRESS_BACKGROUND: [f32; 4] = [0.4, 0., 0., 1.];
 
 const BLACK : [f32; 4] = [0., 0., 0., 1.];
 
-const TIME: f64 = 5.;
+const GAME_TIME: f64 = 5.;
 
 const END_TIMER: f64 = 3.;
 const END_BLINKING_TIMER: f64 = 0.1;
 
-
-enum State {
-    Running,
-    End {
-        timer: f64,
-        blinking_timer: f64,
-        blinking: bool
-    }
-}
-
 pub struct App {
     up_touch_id: Option<u64>,
     down_touch_id: Option<u64>,
-    up_score: f32,
-    down_score: f32,
     state: State,
+}
+
+pub enum State {
+    Start,
+    Game {
+        up_score: f32,
+        down_score: f32,
+    },
+    End {
+        up_winner: bool,
+        timer: f64,
+        blinking_timer: f64,
+        blink: bool,
+    },
 }
 
 impl App {
     pub fn new() -> App {
+        js! {
+            tgl.draw_start = function(up, down) {
+                this.context.clearRect(0, 0, this.canvas.width, this.canvas.height);
+                if up {
+                } else {
+                }
+                if down {
+                } else {
+                }
+            };
+        }
         App {
             up_touch_id: None,
             down_touch_id: None,
-            up_score: 0.,
-            down_score: 0.,
-            state: State::Running,
+            state: State::Start,
         }
     }
     pub fn update(&mut self, dt: f64) {
         self.state = match self.state {
-            State::Running => {
+            State::Start => {
                 if self.up_touch_id.is_none() == self.down_touch_id.is_none() {
-                    self.down_score += (dt/TIME) as f32;
-                } else {
-                    self.up_score += (dt/TIME) as f32;
-                }
-
-                if self.down_score >= 1. || self.up_score >= 1. {
-                    State::End {
-                        timer: END_TIMER,
-                        blinking_timer: END_BLINKING_TIMER,
-                        blinking: false,
+                    State::Game {
+                        up_score: 0.0,
+                        down_score: 0.0,
                     }
                 } else {
-                    State::Running
+                    State::Start
+                }
+            },
+            State::Game { mut up_score, mut down_score } => {
+                if self.up_touch_id.is_none() == self.down_touch_id.is_none() {
+                    down_score += (dt/GAME_TIME) as f32;
+                } else {
+                    up_score += (dt/GAME_TIME) as f32;
+                }
+
+                if down_score >= 1. || up_score >= 1. {
+                    State::End {
+                        up_winner: up_score >= 1.,
+                        blink: false,
+                        blinking_timer: END_BLINKING_TIMER,
+                        timer: END_TIMER,
+                    }
+                } else {
+                    State::Game {
+                        up_score,
+                        down_score,
+                    }
                 }
             }
-            State::End { mut timer, mut blinking_timer, mut blinking } => {
+            State::End { mut timer, mut blinking_timer, mut blink, up_winner } => {
                 timer -= dt;
                 blinking_timer -= dt;
                 if blinking_timer <= 0. {
                     blinking_timer = END_BLINKING_TIMER;
-                    blinking = !blinking;
+                    blink = !blink;
                 }
 
                 if timer <= 0. {
-                    self.up_score = 0.;
-                    self.down_score = 0.;
-                    State::Running
+                    State::Start
                 } else {
                     State::End {
-                        timer: timer,
-                        blinking_timer: blinking_timer,
-                        blinking: blinking,
+                        timer,
+                        blinking_timer,
+                        blink,
+                        up_winner,
                     }
                 }
             }
         };
     }
-    pub fn draw(&mut self, frame: &mut graphics::Frame) {
+    pub fn draw(&self) {
         let up_color = if self.up_touch_id.is_some() {
-            UP_COLOR_ACTIVE
+            COLOR_ACTIVE
         } else {
-            UP_COLOR
+            COLOR
         };
-
-        frame.draw_rectangle(0., 2./3., 2., 2./3., up_color);
 
         let down_color = if self.down_touch_id.is_some() {
-            DOWN_COLOR_ACTIVE
+            COLOR_ACTIVE
         } else {
-            DOWN_COLOR
+            COLOR
         };
-
-        frame.draw_rectangle(0., -2./3., 2., 2./3., down_color);
-
-        frame.draw_rectangle(0., 0., 2., 2./3., PROGRESS_BACKGROUND);
-
-        match self.state {
-            State::Running | State::End { timer: _, blinking_timer: _, blinking: true} => {
-                frame.draw_rectangle(0., 1./6., self.up_score * 2., 1./3., PROGRESS);
-                frame.draw_rectangle(0., -1./6., self.down_score * 2., 1./3., PROGRESS);
-            },
-            State::End { timer: _, blinking_timer: _, blinking: false } => {
-                if self.up_score > self.down_score {
-                    frame.draw_rectangle(0., -1./6., self.down_score * 2., 1./3., PROGRESS);
-                } else {
-                    frame.draw_rectangle(0., 1./6., self.up_score * 2., 1./3., PROGRESS);
-                }
-            }
-        }
-        frame.draw_rectangle(0., 0., 2., 0.05, BLACK);
-        frame.draw_rectangle(0., 1./3., 2., 0.05, BLACK);
-        frame.draw_rectangle(0., -1./3., 2., 0.05, BLACK);
     }
-    pub fn touch(&mut self, touch: glutin::Touch) {
-        use glutin::TouchPhase::*;
+    pub fn touch(&mut self, touch: ::winit::Touch) {
+        use ::winit::TouchPhase::*;
         match touch.phase {
             Started => {
                 if touch.location.1 >= 1./3. {

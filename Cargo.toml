@@ -1,13 +1,8 @@
 [package]
 name = "mimesis"
 version = "0.1.0"
-authors = ["thiolliere <guillaume.thiolliere@opmbx.org>"]
+authors = ["thiolliere <guil.thiolliere@gmail.com>"]
 
 [dependencies]
-glium = "*"
-fps_clock = "*"
-libc = "*"
-
-[replace]
-"glutin:0.7.4" = { git = 'https://github.com/thiolliere/glutin', branch = '0.7.4' }
-# "glutin:0.7.4" = { path = "../glutin" }
+winit = "0.9"
+stdweb = "0.1"

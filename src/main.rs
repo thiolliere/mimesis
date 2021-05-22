@@ -1,14 +1,29 @@
-extern crate fps_clock;
-#[macro_use] extern crate glium;
+#![recursion_limit="500"]
+#[macro_use] extern crate stdweb;
+extern crate winit;
+use std::os::raw::c_void;
+use std::ptr;
+use std::cell::RefCell;
 
-use glium::glutin;
-use glium::DisplayBuild;
-
-#[cfg(target_os = "emscripten")]
-pub mod emscripten;
+mod ffi;
 mod app;
-mod graphics;
-pub mod backtrace_hack;
+
+thread_local!(static MAIN_LOOP_CALLBACK: RefCell<*mut c_void> = RefCell::new(ptr::null_mut()));
+
+fn set_main_loop_callback<F>(callback : F) where F : FnMut() {
+    MAIN_LOOP_CALLBACK.with(|log| {
+        *log.borrow_mut() = &callback as *const _ as *mut c_void;
+    });
+
+    unsafe { ::ffi::emscripten_set_main_loop(Some(wrapper::<F>), 0, 1); }
+
+    unsafe extern "C" fn wrapper<F>() where F : FnMut() {
+        MAIN_LOOP_CALLBACK.with(|z| {
+            let closure = *z.borrow_mut() as *mut F;
+            (*closure)();
+        });
+    }
+}
 
 pub trait OkOrExit {
     type OkType;
@@ -32,83 +47,32 @@ fn main() {
 }
 
 fn safe_main() -> Result<(), String> {
-    configure_fullscreen_strategy();
-    let builder = glutin::WindowBuilder::new()
-        .with_multitouch()
-        .with_title("airjump");
-
-    let window = builder.build_glium().map_err(|e| format!("build glium: {}", e))?;
-
-    let mut graphics = graphics::Graphics::new(&window).map_err(|e| format!("graphics: {}", e))?;
-
+    let mut events_loop = winit::EventsLoop::new();
     let mut app = app::App::new();
 
-    // return whereas main loop breaks
-    set_main_loop(|dt| -> bool {
-        for event in window.poll_events() {
-            use glium::glutin::Event::*;
+    set_main_loop_callback(|| {
+        events_loop.poll_events(|event| {
             match event {
-                Closed => return true,
-                Touch(mut touch) => {
-                    let (w, h) = window.get_window().unwrap().get_inner_size_points().unwrap();
-                    touch.location.0 -= (w/2) as f64;
-                    touch.location.0 /= (w/2) as f64;
-                    touch.location.1 -= (h/2) as f64;
-                    touch.location.1 /= (h/2) as f64;
+                winit::Event::WindowEvent {
+                    event: winit::WindowEvent::Touch(mut touch), ..
+                } => {
+                    let height = js! {return window.innerWidth};
+                    let width = js! {return window.innerHeight};
+                    touch.location.0 -= (width/2) as f64;
+                    touch.location.0 /= (width/2) as f64;
+                    touch.location.1 -= (height/2) as f64;
+                    touch.location.1 /= (height/2) as f64;
                     touch.location.1 *= -1.;
 
                     app.touch(touch);
                 },
                 _ => (),
             }
-        }
+        });
 
-        app.update(dt);
-
-        let mut target = window.draw();
-        {
-            let mut frame = graphics::Frame::new(&mut graphics, &mut target);
-            frame.clear();
-            app.draw(&mut frame);
-        }
-        target.finish().unwrap();
-
-        return false
+        app.update(1.0/60.0);
+        app.draw();
     });
 
     Ok(())
-}
-
-#[cfg(target_os = "emscripten")]
-fn configure_fullscreen_strategy() {
-    emscripten::request_soft_fullscreen_strategy();
-}
-
-#[cfg(not(target_os = "emscripten"))]
-fn configure_fullscreen_strategy() {
-}
-
-#[cfg(target_os = "emscripten")]
-fn set_main_loop<F: FnMut(f64) -> bool>(mut main_loop: F) {
-    let dt = 1.0 / 60f64;
-    emscripten::set_main_loop_callback(|| {
-        if main_loop(dt) {
-            emscripten::cancel_main_loop();
-        }
-    });
-}
-
-// behavior differ from emscripten as it doesn't return
-// as long as the main loop doesn't end
-#[cfg(all(not(target_os = "emscripten")))]
-fn set_main_loop<F: FnMut(f64) -> bool>(mut main_loop: F) {
-    // If running out of time then slow down the game
-    let mut fps_clock = fps_clock::FpsClock::new(60);
-    let dt = 1.0 / 60.0;
-    loop {
-        if main_loop(dt) {
-            break
-        }
-        fps_clock.tick();
-    }
 }
